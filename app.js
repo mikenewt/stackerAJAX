@@ -6,6 +6,14 @@ $(document).ready( function() {
 		var tags = $(this).find("input[name='tags']").val();
 		getUnanswered(tags);
 	});
+
+	$('.inspiration-getter').submit(function(event) {
+		// zero out results if previous search has run
+		$('.results').html('');
+		// get the top 10 answerers based on tags the user submitted
+		var tags = $(this).find("input[name='answerers']").val();
+		getInspiration(tags);
+	});
 });
 
 // this function takes the question object returned by StackOverflow 
@@ -41,6 +49,32 @@ var showQuestion = function(question) {
 	return result;
 };
 
+// this function takes the tag_score object returned by StackOverflow
+// and creates new result to be appended to DOM
+var showAnswerer = function(answerer) {
+
+	// clone our result template code
+	var result = $('.templates .inspiration').clone();
+
+	// Set the profile information in result
+	var answerProfile = result.find('.display_name a');
+	answerProfile.attr('href', answerer.link);
+	answerProfile.text(answerer.user.display_name);
+	
+	// Set the profile image in result
+	var profileImage = result.find('.profile_img img');
+	profileImage.attr('src', answerer.user.profile_image);
+
+	// Set the reputation information in result
+	var reputationScore = result.find('.reputation');
+	reputationScore.text(answerer.user.reputation);
+
+	// Set the questions answered information in result
+	var questionsAnswered = result.find('.questions-answered');
+	questionsAnswered.text(answerer.post_count);
+
+	return result;
+}
 
 // this function takes the results object from StackOverflow
 // and creates info about search results to be appended to DOM
@@ -88,5 +122,33 @@ var getUnanswered = function(tags) {
 	});
 };
 
+var getInspiration = function(tags) {
 
+	// the parameters we need to pass in our request to StackOverflow's API
+	var request = {
+									site: 'stackoverflow',
+									order: 'desc',
+									sort: 'creation'};
+
+	var result = $.ajax({
+		url: "http://api.stackexchange.com/2.2/tags/" + tags + "/top-answerers/all_time",
+		data: request,
+		dataType: "json",
+		type: "GET",
+		})
+	.done(function(result){
+		var searchResults = showSearchResults(tags, result.items.length);
+
+		$('.search-results').html(searchResults);
+
+		$.each(result.items, function(i, item) {
+			var answerer = showAnswerer(item);
+			$('.results').append(answerer);
+		});
+	})
+	.fail(function(jqXHR, error, errorThrown) {
+		var errorElem = showError(error);
+		$('search-results').append(errorElem);
+	});
+};
 
